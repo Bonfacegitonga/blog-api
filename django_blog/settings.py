@@ -11,6 +11,11 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
 from pathlib import Path
+from environs import Env
+
+
+env = Env()
+env.read_env()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,34 +25,46 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-e9$_=#*k&mpw5^#zf#ef&j$o@o@c2ajx!0ir2i*2!oio-r3xi1'
+SECRET_KEY = env.str("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG =  env.bool("DEBUG", default=False)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [".herokuapp.com", "localhost", "127.0.0.1"]
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    "whitenoise.runserver_nostatic",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    "django.contrib.sites",
+    
     #local
     'accounts.apps.AccountsConfig',
     'posts.apps.PostsConfig',
     # 3rd-party apps
     "rest_framework",
-    "corsheaders"
+    "corsheaders",
+    'rest_framework.authtoken',
+    'dj_rest_auth', 
+    "allauth",
+    "allauth.account", 
+    "allauth.socialaccount",
+    "dj_rest_auth.registration",
+    "drf_spectacular",
+
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -68,11 +85,14 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                "django.template.context_processors.request",
             ],
         },
     },
 ]
 
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+SITE_ID = 1
 WSGI_APPLICATION = 'django_blog.wsgi.application'
 
 
@@ -80,10 +100,7 @@ WSGI_APPLICATION = 'django_blog.wsgi.application'
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    "default": env.dj_db_url("DATABASE_URL") 
 }
 
 
@@ -123,6 +140,11 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+STATICFILES_DIRS = [BASE_DIR / "static"] 
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 
@@ -138,7 +160,17 @@ CORS_ORIGIN_WHITELIST = (
 CSRF_TRUSTED_ORIGINS = ["http://localhost:3000"] 
 
 REST_FRAMEWORK = {
-         "DEFAULT_PERMISSION_CLASSES": [
-         "rest_framework.permissions.IsAuthenticated", 
+         "DEFAULT_PERMISSION_CLASSES":( 'rest_framework.permissions.IsAdminUser', ),
+    "DEFAULT_AUTHENTICATION_CLASSES": [ 
+         "rest_framework.authentication.SessionAuthentication",
+         "rest_framework.authentication.TokenAuthentication",
     ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Blog API Project",
+    "DESCRIPTION": "A sample blog to learn about DRF",
+    "VERSION": "1.0.0",
+# OTHER SETTINGS
 }
